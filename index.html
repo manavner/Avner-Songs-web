@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avner Man | Music</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Secular+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-card: #12121a;
+    --bg-surface: #1a1a2e;
+    --accent: #e94560;
+    --accent-glow: rgba(233, 69, 96, 0.3);
+    --accent-hover: #ff5a7a;
+    --gold: #f0c040;
+    --text-primary: #eaeaea;
+    --text-secondary: #8888aa;
+    --border: rgba(255,255,255,0.06);
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated background ── */
+  .bg-orbs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .bg-orbs .orb {
+    position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.15;
+    animation: float 20s ease-in-out infinite;
+  }
+  .bg-orbs .orb:nth-child(1) { width: 500px; height: 500px; background: var(--accent); top: -10%; left: -10%; animation-delay: 0s; }
+  .bg-orbs .orb:nth-child(2) { width: 400px; height: 400px; background: #4a0e8f; bottom: -10%; right: -5%; animation-delay: -7s; }
+  .bg-orbs .orb:nth-child(3) { width: 300px; height: 300px; background: var(--gold); top: 50%; left: 40%; animation-delay: -14s; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, -40px) scale(1.1); }
+    66% { transform: translate(-30px, 50px) scale(0.9); }
+  }
+
+  /* ── Layout ── */
+  .app { position: relative; z-index: 1; }
+
+  /* ── Header ── */
+  header {
+    padding: 60px 24px 40px;
+    text-align: center;
+    position: relative;
+  }
+  header::after {
+    content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 80px; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+  .logo-text {
+    font-family: 'Secular One', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 4.5rem);
+    background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    color: var(--text-secondary);
+    font-weight: 300;
+    font-size: 1.1rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  /* ── Nav tabs ── */
+  .tabs {
+    display: flex; justify-content: center; gap: 4px;
+    padding: 20px 16px; flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-secondary); padding: 10px 24px;
+    border-radius: 40px; cursor: pointer; font-family: inherit;
+    font-size: 0.95rem; font-weight: 500; transition: all 0.3s;
+  }
+  .tab-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+  .tab-btn.active {
+    background: var(--accent); border-color: var(--accent);
+    color: #fff; box-shadow: 0 4px 20px var(--accent-glow);
+  }
+
+  /* ── Main container ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* ── Section panels ── */
+  .panel { display: none; animation: fadeIn 0.4s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Google Sheet loader ── */
+  .sheet-loader {
+    background: var(--bg-card); border: 1px dashed var(--border);
+    border-radius: var(--radius); padding: 30px; margin-bottom: 30px;
+    text-align: center;
+  }
+  .sheet-loader p { color: var(--text-secondary); margin-bottom: 16px; font-size: 0.95rem; }
+  .sheet-input-row {
+    display: flex; gap: 10px; max-width: 700px; margin: 0 auto;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .sheet-input-row input {
+    flex: 1; min-width: 260px; padding: 12px 16px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-family: inherit; font-size: 0.9rem;
+    direction: ltr; text-align: left;
+  }
+  .sheet-input-row input:focus { outline: none; border-color: var(--accent); }
+  .btn {
+    padding: 12px 28px; border: none; border-radius: 8px;
+    font-family: inherit; font-size: 0.95rem; font-weight: 500;
+    cursor: pointer; transition: all 0.25s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; font-weight: 500; }
+  .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 20px var(--accent-glow); transform: translateY(-1px); }
+  .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text-primary); }
+
+  /* ── Search & filter ── */
+  .toolbar {
+    display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
+  }
+  .search-box {
+    flex: 1; min-width: 220px; position: relative;
+  }
+  .search-box input {
+    width: 100%; padding: 12px 16px 12px 44px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-family: inherit; font-size: 0.95rem;
+  }
+  .search-box input:focus { outline: none; border-color: var(--accent); }
+  .search-box .icon {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-secondary); pointer-events: none;
+  }
+  .song-count {
+    color: var(--text-secondary); font-size: 0.85rem;
+    padding: 8px 16px; background: var(--bg-card);
+    border-radius: 8px; white-space: nowrap;
+  }
+
+  /* ── Song grid ── */
+  .songs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .song-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .song-card:hover {
+    border-color: rgba(233, 69, 96, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .song-card .thumb-wrap {
+    position: relative; padding-top: 56.25%; overflow: hidden;
+    background: var(--bg-surface);
+  }
+  .song-card .thumb-wrap img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.4s;
+  }
+  .song-card:hover .thumb-wrap img { transform: scale(1.05); }
+  .play-overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s;
+  }
+  .song-card:hover .play-overlay { opacity: 1; }
+  .play-btn-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px var(--accent-glow);
+    transition: transform 0.2s;
+  }
+  .play-btn-icon:hover { transform: scale(1.1); }
+  .play-btn-icon svg { width: 24px; height: 24px; fill: #fff; margin-right: -2px; }
+
+  .song-info { padding: 14px 16px; }
+  .song-title {
+    font-weight: 500; font-size: 1rem;
+    color: var(--text-primary); margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .song-meta {
+    color: var(--text-secondary); font-size: 0.82rem;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .song-category {
+    display: inline-block; padding: 2px 8px;
+    background: rgba(233,69,96,0.12); color: var(--accent);
+    border-radius: 4px; font-size: 0.75rem; font-weight: 500;
+  }
+
+  .song-actions {
+    display: flex; gap: 6px; padding: 0 16px 14px;
+  }
+  .song-actions a, .song-actions button {
+    padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;
+    text-decoration: none; cursor: pointer; font-family: inherit;
+    transition: all 0.2s;
+  }
+  .song-actions a {
+    background: rgba(233,69,96,0.1); color: var(--accent); border: none;
+  }
+  .song-actions a:hover { background: rgba(233,69,96,0.2); }
+  .song-actions .btn-del {
+    background: transparent; border: 1px solid var(--border); color: var(--text-secondary);
+  }
+  .song-actions .btn-del:hover { border-color: #e94560; color: #e94560; }
+
+  /* ── Admin panel ── */
+  .admin-form {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 30px; max-width: 600px;
+    margin: 0 auto;
+  }
+  .admin-form h3 {
+    font-family: 'Secular One', sans-serif;
+    font-size: 1.3rem; margin-bottom: 20px; color: var(--accent);
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; margin-bottom: 6px; color: var(--text-secondary);
+    font-size: 0.88rem; font-weight: 500;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 11px 14px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-family: inherit;
+    font-size: 0.95rem;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .form-group textarea { min-height: 80px; resize: vertical; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+  /* ── Bulk import ── */
+  .bulk-section {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 30px; max-width: 600px;
+    margin: 30px auto 0;
+  }
+  .bulk-section h3 {
+    font-family: 'Secular One', sans-serif;
+    font-size: 1.3rem; margin-bottom: 8px; color: var(--gold);
+  }
+  .bulk-section p { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px; }
+  .bulk-section textarea {
+    width: 100%; min-height: 120px; padding: 12px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-family: monospace;
+    font-size: 0.85rem; direction: ltr; text-align: left; resize: vertical;
+  }
+  .bulk-section textarea:focus { outline: none; border-color: var(--gold); }
+
+  /* ── Export ── */
+  .export-section {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 30px; max-width: 600px;
+    margin: 30px auto 0; text-align: center;
+  }
+  .export-section h3 {
+    font-family: 'Secular One', sans-serif;
+    font-size: 1.3rem; margin-bottom: 8px; color: var(--text-primary);
+  }
+  .export-section p { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px; }
+  .export-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* ── Embed player ── */
+  .player-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+  }
+  .player-overlay.active { display: flex; }
+  .player-wrap {
+    width: 90%; max-width: 800px; position: relative;
+    border-radius: var(--radius); overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .player-wrap .close-player {
+    position: absolute; top: -44px; left: 0;
+    background: transparent; border: none; color: #fff;
+    font-size: 1.4rem; cursor: pointer; padding: 8px;
+    font-family: inherit;
+  }
+  .player-wrap iframe {
+    width: 100%; aspect-ratio: 16/9; border: none; display: block;
+  }
+
+  /* ── Notification toast ── */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--bg-surface); border: 1px solid var(--accent);
+    color: var(--text-primary); padding: 14px 28px;
+    border-radius: 10px; font-size: 0.95rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 2000;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text-secondary);
+  }
+  .empty-state .big-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.4; }
+  .empty-state h3 { color: var(--text-primary); margin-bottom: 8px; font-weight: 500; }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: flex; justify-content: center; gap: 40px;
+    padding: 24px; flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Secular One', sans-serif;
+    font-size: 2rem; color: var(--accent);
+  }
+  .stat-label { color: var(--text-secondary); font-size: 0.82rem; margin-top: 2px; }
+
+  /* ── Category filter chips ── */
+  .filter-chips {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+    justify-content: center;
+  }
+  .chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 0.82rem;
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+    font-family: inherit;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text-primary); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .songs-grid { grid-template-columns: 1fr; }
+    .form-row { flex-direction: column; gap: 0; }
+    .stats-bar { gap: 20px; }
+    header { padding: 40px 16px 30px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb"></div>
+  <div class="orb"></div>
+  <div class="orb"></div>
+</div>
+
+<div class="app">
+  <header>
+    <div class="logo-text">AVNER MAN</div>
+    <div class="subtitle">M U S I C</div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-num" id="totalSongs">0</div>
+      <div class="stat-label">שירים</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="totalCategories">0</div>
+      <div class="stat-label">קטגוריות</div>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="songs">🎵 השירים שלי</button>
+    <button class="tab-btn" data-tab="admin">➕ הוספת שיר</button>
+    <button class="tab-btn" data-tab="import">📥 ייבוא / ייצוא</button>
+  </nav>
+
+  <div class="container">
+    <!-- ═══ Songs Panel ═══ -->
+    <div class="panel active" id="panel-songs">
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="חיפוש שירים...">
+          <span class="icon">🔍</span>
+        </div>
+        <div class="song-count" id="songCount">0 שירים</div>
+      </div>
+      <div class="filter-chips" id="filterChips"></div>
+      <div class="songs-grid" id="songsGrid"></div>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="big-icon">🎶</div>
+        <h3>אין שירים עדיין</h3>
+        <p>הוסף שירים דרך לשונית "הוספת שיר" או ייבא מקובץ</p>
+      </div>
+    </div>
+
+    <!-- ═══ Admin Panel ═══ -->
+    <div class="panel" id="panel-admin">
+      <div class="admin-form">
+        <h3>🎤 הוספת שיר חדש</h3>
+        <div class="form-group">
+          <label>קישור YouTube</label>
+          <input type="url" id="inputUrl" placeholder="https://www.youtube.com/watch?v=..." dir="ltr" style="text-align:left">
+        </div>
+        <div class="form-group">
+          <label>שם השיר</label>
+          <input type="text" id="inputTitle" placeholder="שם השיר">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>קטגוריה</label>
+            <input type="text" id="inputCategory" placeholder="למשל: רוק, פופ, בלדה" list="categoryList">
+            <datalist id="categoryList"></datalist>
+          </div>
+          <div class="form-group">
+            <label>שנה</label>
+            <input type="number" id="inputYear" placeholder="2024" min="1950" max="2030">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>תיאור (אופציונלי)</label>
+          <textarea id="inputDesc" placeholder="מילים על השיר..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addSong()">הוסף שיר</button>
+          <button class="btn btn-secondary" onclick="clearForm()">נקה טופס</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Import/Export Panel ═══ -->
+    <div class="panel" id="panel-import">
+
+      <div class="sheet-loader">
+        <p>📊 טען שירים מגיליון Google Sheets (הגיליון חייב להיות פתוח לצפייה ציבורית)</p>
+        <div class="sheet-input-row">
+          <input type="text" id="sheetUrl" placeholder="הדבק קישור לגיליון Google Sheets..." dir="ltr"
+            value="https://docs.google.com/spreadsheets/d/1RDB2HlSt6qXoXpa4dfNZHLGEZ82TDQawGX-C1MEfE-Q/edit?usp=sharing">
+          <button class="btn btn-primary" onclick="loadFromSheet()">טען מהגיליון</button>
+        </div>
+        <p style="font-size:0.8rem; margin-top:10px; color: var(--text-secondary)">
+          💡 וודא שהגיליון מוגדר כ"כל מי שיש לו קישור יכול לצפות"
+        </p>
+      </div>
+
+      <div class="bulk-section">
+        <h3>📄 ייבוא מקובץ CSV</h3>
+        <p>העלה קובץ CSV עם עמודות: כותרת, קישור YouTube, קטגוריה, שנה, תיאור. השורה הראשונה (כותרות) תדלג אוטומטית.</p>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <label class="btn btn-primary" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            📁 בחר קובץ CSV
+            <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" onchange="handleCSVImport(event)">
+          </label>
+          <span id="csvFileName" style="color:var(--text-secondary); font-size:0.85rem;"></span>
+        </div>
+        <div style="margin-top:14px; padding:14px; background:var(--bg-surface); border-radius:8px; font-size:0.82rem; color:var(--text-secondary); direction:ltr; text-align:left;">
+          <strong style="color:var(--text-primary);">CSV Format Example:</strong><br>
+          Title,URL,Category,Year,Description<br>
+          My Song,https://youtube.com/watch?v=abc123,Rock,2024,Great song<br>
+          Another Song,https://youtu.be/def456,Pop,2023,
+        </div>
+      </div>
+
+      <div class="bulk-section">
+        <h3>📋 ייבוא מהיר</h3>
+        <p>הדבק קישורי YouTube – קישור אחד בכל שורה. ניתן להוסיף שם שיר אחרי פסיק.</p>
+        <textarea id="bulkInput" placeholder="https://youtube.com/watch?v=abc123, שם השיר
+https://youtube.com/watch?v=def456, שיר נוסף
+https://youtube.com/watch?v=ghi789" dir="ltr" style="text-align:left"></textarea>
+        <div style="margin-top:12px; display:flex; gap:10px;">
+          <button class="btn btn-primary" onclick="bulkImport()">ייבא</button>
+        </div>
+      </div>
+
+      <div class="export-section">
+        <h3>💾 ייצוא נתונים</h3>
+        <p>שמור גיבוי של כל השירים שלך</p>
+        <div class="export-btns">
+          <button class="btn btn-secondary" onclick="exportJSON()">ייצוא JSON</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">ייצוא CSV</button>
+          <button class="btn btn-secondary" onclick="importJSON()">ייבוא JSON</button>
+        </div>
+        <input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="handleJSONImport(event)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Player overlay -->
+<div class="player-overlay" id="playerOverlay" onclick="closePlayer(event)">
+  <div class="player-wrap">
+    <button class="close-player" onclick="closePlayer()">✕ סגור</button>
+    <iframe id="playerFrame" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Data Store ───
+let songs = [];
+let activeFilter = 'all';
+
+// ─── Utility: extract YouTube ID ───
+function getYTId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*v=|embed\/|v\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function getThumb(url) {
+  const id = getYTId(url);
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '';
+}
+
+// ─── Toast notification ───
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── Tabs ───
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Render ───
+function render() {
+  const grid = document.getElementById('songsGrid');
+  const empty = document.getElementById('emptyState');
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  let filtered = songs;
+  if (activeFilter !== 'all') {
+    filtered = filtered.filter(s => (s.category || 'ללא קטגוריה') === activeFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(s =>
+      (s.title || '').toLowerCase().includes(search) ||
+      (s.category || '').toLowerCase().includes(search) ||
+      (s.description || '').toLowerCase().includes(search) ||
+      (s.url || '').toLowerCase().includes(search)
+    );
+  }
+
+  document.getElementById('songCount').textContent = `${filtered.length} שירים`;
+  document.getElementById('totalSongs').textContent = songs.length;
+
+  // Categories
+  const cats = [...new Set(songs.map(s => s.category || 'ללא קטגוריה'))];
+  document.getElementById('totalCategories').textContent = cats.length;
+
+  const chipsEl = document.getElementById('filterChips');
+  chipsEl.innerHTML = '';
+  if (cats.length > 1) {
+    const allChip = document.createElement('button');
+    allChip.className = 'chip' + (activeFilter === 'all' ? ' active' : '');
+    allChip.textContent = 'הכל';
+    allChip.onclick = () => { activeFilter = 'all'; render(); };
+    chipsEl.appendChild(allChip);
+    cats.sort().forEach(c => {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (activeFilter === c ? ' active' : '');
+      chip.textContent = c;
+      chip.onclick = () => { activeFilter = c; render(); };
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  // Update category datalist
+  const dl = document.getElementById('categoryList');
+  dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = filtered.map((song, i) => {
+    const realIdx = songs.indexOf(song);
+    const thumb = getThumb(song.url);
+    const title = song.title || extractTitle(song.url);
+    return `
+      <div class="song-card">
+        <div class="thumb-wrap" onclick="playSong('${song.url}')">
+          ${thumb ? `<img src="${thumb}" alt="${title}" loading="lazy">` : ''}
+          <div class="play-overlay">
+            <div class="play-btn-icon">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="song-info">
+          <div class="song-title" title="${title}">${title}</div>
+          <div class="song-meta">
+            ${song.category ? `<span class="song-category">${song.category}</span>` : ''}
+            ${song.year ? `<span>${song.year}</span>` : ''}
+          </div>
+        </div>
+        <div class="song-actions">
+          <a href="${song.url}" target="_blank" rel="noopener">YouTube ↗</a>
+          <button class="btn-del" onclick="deleteSong(${realIdx})">🗑 מחק</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function extractTitle(url) {
+  const id = getYTId(url);
+  return id ? `שיר ${id.substring(0, 6)}...` : 'שיר ללא שם';
+}
+
+// ─── Player ───
+function playSong(url) {
+  const id = getYTId(url);
+  if (!id) { window.open(url, '_blank'); return; }
+  document.getElementById('playerFrame').src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+  document.getElementById('playerOverlay').classList.add('active');
+}
+function closePlayer(e) {
+  if (e && e.target !== e.currentTarget && !e.target.classList.contains('close-player')) return;
+  document.getElementById('playerFrame').src = '';
+  document.getElementById('playerOverlay').classList.remove('active');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePlayer(); });
+
+// ─── Add song ───
+function addSong() {
+  const url = document.getElementById('inputUrl').value.trim();
+  if (!url) { toast('נא להזין קישור YouTube'); return; }
+  songs.push({
+    url,
+    title: document.getElementById('inputTitle').value.trim() || '',
+    category: document.getElementById('inputCategory').value.trim() || '',
+    year: document.getElementById('inputYear').value.trim() || '',
+    description: document.getElementById('inputDesc').value.trim() || '',
+    addedAt: new Date().toISOString()
+  });
+  saveData();
+  clearForm();
+  toast('🎵 השיר נוסף בהצלחה!');
+  render();
+}
+
+function clearForm() {
+  ['inputUrl','inputTitle','inputCategory','inputYear','inputDesc'].forEach(id =>
+    document.getElementById(id).value = ''
+  );
+}
+
+function deleteSong(idx) {
+  if (!confirm('למחוק את השיר?')) return;
+  songs.splice(idx, 1);
+  saveData();
+  render();
+  toast('השיר נמחק');
+}
+
+// ─── CSV file import ───
+function handleCSVImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('csvFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const text = ev.target.result;
+    parseCSVFile(text);
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+function parseCSVFile(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { toast('❌ הקובץ ריק או חסרות שורות'); return; }
+
+  // Detect delimiter
+  const firstLine = lines[0];
+  const delimiter = firstLine.includes('\t') ? '\t' : ',';
+
+  // Parse header to find column indices
+  const headers = parseCSVLine(firstLine, delimiter).map(h => h.trim().toLowerCase());
+
+  // Try to auto-detect columns
+  let urlCol = -1, titleCol = -1, catCol = -1, yearCol = -1, descCol = -1;
+
+  headers.forEach((h, i) => {
+    const hl = h.replace(/["\s]/g, '');
+    if (hl.includes('url') || hl.includes('link') || hl.includes('קישור')) urlCol = i;
+    else if (hl.includes('title') || hl.includes('name') || hl.includes('שם') || hl.includes('כותרת') || hl.includes('שיר')) titleCol = i;
+    else if (hl.includes('categ') || hl.includes('genre') || hl.includes('קטגוריה') || hl.includes('סגנון') || hl.includes('ז\'אנר')) catCol = i;
+    else if (hl.includes('year') || hl.includes('שנה') || hl.includes('date') || hl.includes('תאריך')) yearCol = i;
+    else if (hl.includes('desc') || hl.includes('תיאור') || hl.includes('note') || hl.includes('הערה')) descCol = i;
+  });
+
+  // If no URL column found, scan all columns for YouTube links
+  let count = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCSVLine(lines[i], delimiter);
+    if (cells.length === 0) continue;
+
+    let url = '', title = '', category = '', year = '', description = '';
+
+    if (urlCol >= 0) {
+      url = (cells[urlCol] || '').trim();
+    } else {
+      // Find YouTube URL in any cell
+      for (const cell of cells) {
+        if (cell && (cell.includes('youtube.com') || cell.includes('youtu.be'))) {
+          url = cell.trim();
+          break;
+        }
+      }
+    }
+
+    if (!url || (!url.includes('youtube.com') && !url.includes('youtu.be'))) continue;
+
+    // Clean URL
+    url = url.replace(/^["']|["']$/g, '').trim();
+
+    if (titleCol >= 0) title = (cells[titleCol] || '').trim().replace(/^["']|["']$/g, '');
+    else {
+      // Use first non-URL cell as title
+      for (const cell of cells) {
+        const clean = (cell || '').trim().replace(/^["']|["']$/g, '');
+        if (clean && !clean.includes('youtube.com') && !clean.includes('youtu.be') && clean.length > 1) {
+          title = clean;
+          break;
+        }
+      }
+    }
+
+    if (catCol >= 0) category = (cells[catCol] || '').trim().replace(/^["']|["']$/g, '');
+    if (yearCol >= 0) year = (cells[yearCol] || '').trim().replace(/^["']|["']$/g, '');
+    if (descCol >= 0) description = (cells[descCol] || '').trim().replace(/^["']|["']$/g, '');
+
+    // Avoid duplicates
+    if (!songs.some(s => s.url === url)) {
+      songs.push({ url, title, category, year, description, addedAt: new Date().toISOString() });
+      count++;
+    }
+  }
+
+  saveData();
+  render();
+  toast(count > 0 ? `✅ יובאו ${count} שירים מקובץ CSV!` : 'לא נמצאו קישורי YouTube חדשים');
+}
+
+function parseCSVLine(line, delimiter) {
+  const cells = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === delimiter) { cells.push(current); current = ''; }
+      else { current += ch; }
+    }
+  }
+  cells.push(current);
+  return cells;
+}
+
+// ─── Bulk import ───
+function bulkImport() {
+  const text = document.getElementById('bulkInput').value.trim();
+  if (!text) { toast('נא להדביק קישורים'); return; }
+  const lines = text.split('\n').filter(l => l.trim());
+  let count = 0;
+  lines.forEach(line => {
+    const parts = line.split(',');
+    const url = parts[0].trim();
+    const title = parts[1] ? parts[1].trim() : '';
+    if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) {
+      songs.push({ url, title, category: '', year: '', description: '', addedAt: new Date().toISOString() });
+      count++;
+    }
+  });
+  saveData();
+  render();
+  toast(`✅ יובאו ${count} שירים!`);
+  document.getElementById('bulkInput').value = '';
+}
+
+// ─── Google Sheets loader ───
+function loadFromSheet() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  if (!url) { toast('נא להזין קישור לגיליון'); return; }
+
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!match) { toast('קישור לא תקין'); return; }
+  const sheetId = match[1];
+
+  // Try multiple sheet tabs (gid=0, then gid from URL)
+  const gidMatch = url.match(/gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+
+  toast('⏳ טוען מהגיליון...');
+
+  fetch(csvUrl)
+    .then(r => {
+      if (!r.ok) throw new Error('Cannot access sheet');
+      return r.text();
+    })
+    .then(csv => {
+      parseSheetCSV(csv);
+    })
+    .catch(err => {
+      // Try alternative: published CSV
+      const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+      fetch(pubUrl)
+        .then(r => r.text())
+        .then(csv => parseSheetCSV(csv))
+        .catch(() => {
+          toast('❌ לא ניתן לטעון. וודא שהגיליון פתוח לצפייה ציבורית');
+        });
+    });
+}
+
+function parseSheetCSV(csv) {
+  const lines = csv.split('\n').filter(l => l.trim());
+  let count = 0;
+
+  lines.forEach((line, idx) => {
+    // Extract URLs from the line
+    const urlMatches = line.match(/https?:\/\/[^\s,"]+youtube[^\s,"]+|https?:\/\/youtu\.be\/[^\s,"]+/gi);
+    if (urlMatches) {
+      urlMatches.forEach(url => {
+        url = url.replace(/[",]+$/, ''); // clean trailing quotes/commas
+        if (!songs.some(s => s.url === url)) {
+          // Try to extract title from the line (text before/after the URL)
+          let title = '';
+          const cells = line.match(/(".*?"|[^,]+)/g);
+          if (cells) {
+            cells.forEach(cell => {
+              cell = cell.replace(/^"|"$/g, '').trim();
+              if (cell && !cell.includes('youtube.com') && !cell.includes('youtu.be') && cell.length > 2) {
+                if (!title) title = cell;
+              }
+            });
+          }
+          songs.push({ url, title, category: '', year: '', description: '', addedAt: new Date().toISOString() });
+          count++;
+        }
+      });
+    }
+  });
+
+  saveData();
+  render();
+  toast(count > 0 ? `✅ יובאו ${count} שירים מהגיליון!` : 'לא נמצאו קישורי YouTube חדשים');
+}
+
+// ─── Export / Import JSON ───
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(songs, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, 'avner-songs.json');
+  toast('📁 קובץ JSON הורד');
+}
+
+function exportCSV() {
+  let csv = 'Title,URL,Category,Year,Description\n';
+  songs.forEach(s => {
+    csv += `"${(s.title||'').replace(/"/g,'""')}","${s.url}","${s.category||''}","${s.year||''}","${(s.description||'').replace(/"/g,'""')}"\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  downloadBlob(blob, 'avner-songs.csv');
+  toast('📁 קובץ CSV הורד');
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON() {
+  document.getElementById('jsonFileInput').click();
+}
+
+function handleJSONImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        let count = 0;
+        data.forEach(item => {
+          if (item.url && !songs.some(s => s.url === item.url)) {
+            songs.push(item);
+            count++;
+          }
+        });
+        saveData();
+        render();
+        toast(`✅ יובאו ${count} שירים מהקובץ`);
+      }
+    } catch { toast('❌ קובץ JSON לא תקין'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ─── Persistence (in-memory + data URL for download) ───
+// Note: Using a global variable as primary store
+// Data persists within the session and can be exported/imported
+
+function saveData() {
+  // Data is kept in the `songs` array in memory
+  // Use export to persist across sessions
+}
+
+function loadData() {
+  // Songs start empty — load from sheet or import
+}
+
+// ─── Search ───
+document.getElementById('searchInput').addEventListener('input', render);
+
+// ─── Init ───
+loadData();
+render();
+</script>
+
+</body>
+</html>
