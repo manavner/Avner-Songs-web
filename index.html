@@ -823,37 +823,8 @@ function bulkImport() {
 function loadFromSheet() {
   const url = document.getElementById('sheetUrl').value.trim();
   if (!url) { toast('נא להזין קישור לגיליון'); return; }
-
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (!match) { toast('קישור לא תקין'); return; }
-  const sheetId = match[1];
-
-  // Try multiple sheet tabs (gid=0, then gid from URL)
-  const gidMatch = url.match(/gid=(\d+)/);
-  const gid = gidMatch ? gidMatch[1] : '0';
-
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-
   toast('⏳ טוען מהגיליון...');
-
-  fetch(csvUrl)
-    .then(r => {
-      if (!r.ok) throw new Error('Cannot access sheet');
-      return r.text();
-    })
-    .then(csv => {
-      parseSheetCSV(csv);
-    })
-    .catch(err => {
-      // Try alternative: published CSV
-      const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
-      fetch(pubUrl)
-        .then(r => r.text())
-        .then(csv => parseSheetCSV(csv))
-        .catch(() => {
-          toast('❌ לא ניתן לטעון. וודא שהגיליון פתוח לצפייה ציבורית');
-        });
-    });
+  loadFromSheetUrl(url);
 }
 
 function parseSheetCSV(csv) {
@@ -948,13 +919,41 @@ function handleJSONImport(e) {
 // Note: Using a global variable as primary store
 // Data persists within the session and can be exported/imported
 
+const AUTO_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1RDB2HlSt6qXoXpa4dfNZHLGEZ82TDQawGX-C1MEfE-Q/edit?usp=sharing';
+
 function saveData() {
   // Data is kept in the `songs` array in memory
   // Use export to persist across sessions
 }
 
+function loadFromSheetUrl(url) {
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!match) { toast('קישור לא תקין'); return; }
+  const sheetId = match[1];
+
+  const gidMatch = url.match(/gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+
+  fetch(csvUrl)
+    .then(r => {
+      if (!r.ok) throw new Error('Cannot access sheet');
+      return r.text();
+    })
+    .then(csv => parseSheetCSV(csv))
+    .catch(() => {
+      const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+      fetch(pubUrl)
+        .then(r => r.text())
+        .then(csv => parseSheetCSV(csv))
+        .catch(() => toast('❌ לא ניתן לטעון. וודא שהגיליון פתוח לצפייה ציבורית'));
+    });
+}
+
 function loadData() {
-  // Songs start empty — load from sheet or import
+  toast('⏳ טוען שירים מהגיליון...');
+  loadFromSheetUrl(AUTO_SHEET_URL);
 }
 
 // ─── Search ───
