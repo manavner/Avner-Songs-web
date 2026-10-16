@@ -129,6 +129,8 @@
   .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 20px var(--accent-glow); transform: translateY(-1px); }
   .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border); }
   .btn-secondary:hover { border-color: var(--accent); color: var(--text-primary); }
+  .btn-update { padding: 10px 20px; white-space: nowrap; }
+  .btn:disabled { opacity: 0.6; cursor: wait; transform: none; box-shadow: none; }
 
   /* ── Search & filter ── */
   .toolbar {
@@ -406,6 +408,8 @@
           <span class="icon">🔍</span>
         </div>
         <div class="song-count" id="songCount">0 שירים</div>
+        <button class="btn btn-primary btn-update" id="updateBtn" onclick="updateFromYouTube()"
+          title="חפש ב-YouTube שירים חדשים של אבנר מן והוסף אותם לגיליון">🔄 UPDATE</button>
       </div>
       <div class="filter-chips" id="filterChips"></div>
       <div class="songs-grid" id="songsGrid"></div>
@@ -599,7 +603,7 @@ function render() {
 
   // Update category datalist
   const dl = document.getElementById('categoryList');
-  dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+  dl.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join('');
 
   if (filtered.length === 0) {
     grid.innerHTML = '';
@@ -611,10 +615,10 @@ function render() {
   grid.innerHTML = filtered.map((song, i) => {
     const realIdx = songs.indexOf(song);
     const thumb = getThumb(song.url);
-    const title = song.title || extractTitle(song.url);
+    const title = escapeHtml(song.title || extractTitle(song.url));
     return `
       <div class="song-card">
-        <div class="thumb-wrap" onclick="playSong('${song.url}')">
+        <div class="thumb-wrap" onclick="playSong(songs[${realIdx}].url)">
           ${thumb ? `<img src="${thumb}" alt="${title}" loading="lazy">` : ''}
           <div class="play-overlay">
             <div class="play-btn-icon">
@@ -625,16 +629,20 @@ function render() {
         <div class="song-info">
           <div class="song-title" title="${title}">${title}</div>
           <div class="song-meta">
-            ${song.category ? `<span class="song-category">${song.category}</span>` : ''}
-            ${song.year ? `<span>${song.year}</span>` : ''}
+            ${song.category ? `<span class="song-category">${escapeHtml(song.category)}</span>` : ''}
+            ${song.year ? `<span>${escapeHtml(song.year)}</span>` : ''}
           </div>
         </div>
         <div class="song-actions">
-          <a href="${song.url}" target="_blank" rel="noopener">YouTube ↗</a>
+          <a href="${escapeHtml(song.url)}" target="_blank" rel="noopener">YouTube ↗</a>
           <button class="btn-del" onclick="deleteSong(${realIdx})">🗑 מחק</button>
         </div>
       </div>`;
   }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function extractTitle(url) {
@@ -827,33 +835,48 @@ function loadFromSheet() {
   loadFromSheetUrl(url);
 }
 
-function parseSheetCSV(csv) {
-  const lines = csv.split('\n').filter(l => l.trim());
-  let count = 0;
+// Full CSV parser (handles quoted cells with commas, quotes and newlines)
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { cell += ch; }
+    } else if (ch === '"') { inQuotes = true; }
+    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else { cell += ch; }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
 
-  lines.forEach((line, idx) => {
-    // Extract URLs from the line
-    const urlMatches = line.match(/https?:\/\/[^\s,"]+youtube[^\s,"]+|https?:\/\/youtu\.be\/[^\s,"]+/gi);
-    if (urlMatches) {
-      urlMatches.forEach(url => {
-        url = url.replace(/[",]+$/, ''); // clean trailing quotes/commas
-        if (!songs.some(s => s.url === url)) {
-          // Try to extract title from the line (text before/after the URL)
-          let title = '';
-          const cells = line.match(/(".*?"|[^,]+)/g);
-          if (cells) {
-            cells.forEach(cell => {
-              cell = cell.replace(/^"|"$/g, '').trim();
-              if (cell && !cell.includes('youtube.com') && !cell.includes('youtu.be') && cell.length > 2) {
-                if (!title) title = cell;
-              }
-            });
-          }
-          songs.push({ url, title, category: '', year: '', description: '', addedAt: new Date().toISOString() });
-          count++;
-        }
-      });
-    }
+// Sheet columns: מספר | שם הסרטון | שם הערוץ | קישור YouTube
+function parseSheetCSV(csv) {
+  const rows = parseCSV(csv);
+  if (!rows.length) { toast('הגיליון ריק'); return; }
+
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const findCol = re => headers.findIndex(h => re.test(h));
+  const urlCol = findCol(/קישור|url|link|youtube/);
+  const titleCol = findCol(/שם הסרטון|שם השיר|title|כותרת/);
+  const hasHeader = urlCol >= 0 || titleCol >= 0;
+
+  let count = 0;
+  rows.slice(hasHeader ? 1 : 0).forEach(cells => {
+    const url = (urlCol >= 0 ? cells[urlCol] : cells.find(c => getYTId(c)) || '').trim();
+    const id = getYTId(url);
+    if (!id || songs.some(s => getYTId(s.url) === id)) return;
+    const title = titleCol >= 0
+      ? (cells[titleCol] || '').trim()
+      : (cells.find(c => c.trim() && !getYTId(c) && !/^\d+$/.test(c.trim())) || '').trim();
+    songs.push({ url, title, category: '', year: '', description: '', addedAt: new Date().toISOString() });
+    count++;
   });
 
   saveData();
@@ -931,10 +954,12 @@ function loadFromSheetUrl(url) {
   if (!match) { toast('קישור לא תקין'); return; }
   const sheetId = match[1];
 
+  // Only pass gid when the link names a specific tab; otherwise the first tab is used
+  // (the first tab's gid is not necessarily 0, and a wrong gid makes Google return an error).
   const gidMatch = url.match(/gid=(\d+)/);
-  const gid = gidMatch ? gidMatch[1] : '0';
+  const gidParam = gidMatch ? `&gid=${gidMatch[1]}` : '';
 
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv${gidParam}`;
 
   fetch(csvUrl)
     .then(r => {
@@ -942,18 +967,48 @@ function loadFromSheetUrl(url) {
       return r.text();
     })
     .then(csv => parseSheetCSV(csv))
-    .catch(() => {
-      const pubUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
-      fetch(pubUrl)
-        .then(r => r.text())
-        .then(csv => parseSheetCSV(csv))
-        .catch(() => toast('❌ לא ניתן לטעון. וודא שהגיליון פתוח לצפייה ציבורית'));
-    });
+    .catch(() => toast('❌ לא ניתן לטעון. וודא שהגיליון פתוח לצפייה ציבורית'));
 }
 
 function loadData() {
   toast('⏳ טוען שירים מהגיליון...');
   loadFromSheetUrl(AUTO_SHEET_URL);
+}
+
+// ─── UPDATE: find new songs on YouTube and append them to the sheet ───
+// Web App URL of the Apps Script in apps-script/Code.gs (see apps-script/README.md).
+const UPDATE_SCRIPT_URL = '';
+
+function updateFromYouTube() {
+  if (!UPDATE_SCRIPT_URL) {
+    toast('⚙️ כפתור UPDATE עדיין לא מחובר לסקריפט (ראה apps-script/README.md)');
+    return;
+  }
+  const btn = document.getElementById('updateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ מחפש ב-YouTube...';
+
+  fetch(`${UPDATE_SCRIPT_URL}?action=update`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) throw new Error(res.error || 'Update failed');
+      let count = 0;
+      res.added.forEach(s => {
+        if (songs.some(x => getYTId(x.url) === getYTId(s.url))) return;
+        songs.push({ url: s.url, title: s.title, category: '', year: '', description: '', addedAt: new Date().toISOString() });
+        count++;
+      });
+      saveData();
+      render();
+      toast(count > 1 ? `✅ נמצאו ${count} שירים חדשים ונוספו לגיליון!`
+        : count === 1 ? '✅ נמצא שיר חדש ונוסף לגיליון!'
+        : '👍 אין שירים חדשים – הרשימה מעודכנת');
+    })
+    .catch(err => toast('❌ העדכון נכשל: ' + err.message))
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = '🔄 UPDATE';
+    });
 }
 
 // ─── Search ───
