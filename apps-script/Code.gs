@@ -16,10 +16,15 @@ const CHANNELS = [
   { id: 'UCz1luN4ETMqoUnBW6ojE42Q', name: 'Avner Man - Topic' }, // DistroKid releases
 ];
 
-// YouTube search, to catch videos on channels not listed above (e.g. a new Topic channel).
-// Only results whose channel name matches CHANNEL_NAME_PATTERN are added.
+// YouTube search, to catch a new DistroKid "Topic" channel not listed above.
+// Only results from a channel named exactly "<artist> - Topic" are added; other channels
+// with similar names (e.g. "AvnerMania") are someone else's.
 const SEARCH_QUERIES = ['Avner Man', 'אבנר מן'];
-const CHANNEL_NAME_PATTERN = /avner\s*man|אבנר\s*מן/i;
+const CHANNEL_NAME_PATTERN = /^(avner man|אבנר מן) - topic$/i;
+
+// Videos whose links appear anywhere in this tab are never added – put non-song uploads
+// here when removing them from the list, so UPDATE doesn't add them back.
+const IGNORE_SHEET_NAME = 'לא להוסיף';
 
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'update';
@@ -39,7 +44,8 @@ function updateSongs() {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheets()[0];
     const values = sheet.getDataRange().getValues();
     const header = values[0].map(String);
     const col = (re, fallback) => {
@@ -60,9 +66,18 @@ function updateSongs() {
       if (n > lastNum) lastNum = n;
     });
 
+    const ignored = new Set();
+    const ignoreSheet = ss.getSheetByName(IGNORE_SHEET_NAME);
+    if (ignoreSheet) {
+      ignoreSheet.getDataRange().getValues().forEach(row => row.forEach(cell => {
+        const id = videoId(String(cell));
+        if (id) ignored.add(id);
+      }));
+    }
+
     const found = typeof YouTube !== 'undefined' ? findWithApi() : findWithRss();
     const fresh = found.videos
-      .filter(v => !existing.has(v.id))
+      .filter(v => !existing.has(v.id) && !ignored.has(v.id))
       .sort((a, b) => String(a.publishedAt).localeCompare(String(b.publishedAt)));
 
     const width = Math.max(header.length, numCol + 1, titleCol + 1, channelCol + 1, linkCol + 1);
